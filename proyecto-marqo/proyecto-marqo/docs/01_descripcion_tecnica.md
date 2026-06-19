@@ -26,7 +26,7 @@ Según el repositorio oficial (github.com/marqo-ai/marqo):
   subyacente (OpenSearch en la v1).
 - Otros: 0.8%.
 
-## ⚠️ Nota importante sobre el estado actual del proyecto
+##  importante: estado actual del proyecto
 El repositorio open source de Marqo está oficialmente **deprecado** (no
 recibe más actualizaciones). La empresa giró su modelo de negocio hacia una
 plataforma comercial de "AI-native ecommerce search & product discovery"
