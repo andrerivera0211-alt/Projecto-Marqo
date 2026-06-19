@@ -38,7 +38,6 @@ sharding horizontal del índice para escalar a cientos de millones de
 documentos.
 
 ## Fuentes
-- Blog oficial: "Marqo V2: Performance at Scale, Predictability, and
-  Control" (marqo.ai/blog)
-- Blog oficial: "Understanding Recall in HNSW Search" (marqo.ai/blog)
-- Repositorio: github.com/marqo-ai/marqo
+Blog oficial: https://www.marqo.ai/blog/what-is-marqo
+Blog oficial: https://www.marqo.ai/blog/understanding-recall-in-
+- Repositorio de Marqo: github.com/marqo-ai/marqo
