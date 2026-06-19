@@ -2,7 +2,7 @@
 
 Repositorio grupal para el desarrollo del proyecto basado en **Marqo**, motor de búsqueda vectorial end-to-end (documents-in, documents-out).
 
-## 📁 Estructura del repositorio
+## Estructura del repositorio
 
 ```
 proyecto-marqo/
@@ -26,7 +26,7 @@ proyecto-marqo/
     └── ci.yml
 ```
 
-## 🚀 Cómo levantar el entorno
+##  Cómo levantar el entorno
 
 1. Clonar el repositorio:
    ```bash
@@ -51,12 +51,12 @@ proyecto-marqo/
    python src/ingest.py
    ```
 
-## 👥 Flujo de trabajo en equipo (Git)
+##  Flujo de trabajo en equipo (Git)
 
 - `main`: rama estable, solo se actualiza vía Pull Request aprobado.
 - `develop`: rama de integración del equipo.
 - `feature/<nombre>`: una rama por funcionalidad/persona (ej. `feature/ingesta-pdfs`).
 
-## 📚 Documentación
+##  Documentación
 
 Ver carpeta [`docs/`](./docs) para el informe técnico (definición, origen, paradigma e indexación interna).
