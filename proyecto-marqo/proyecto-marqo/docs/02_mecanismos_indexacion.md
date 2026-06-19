@@ -27,7 +27,7 @@ cambió entre las dos generaciones del producto.
   mutaciones (updates/deletes) y sharding horizontal sin los cuellos de
   botella de los segmentos inmutables de Lucene.
 
-## Conclusión: ¿HNSW, IVF o combinación?
+## ¿HNSW, IVF o combinación?
 Marqo usa **exclusivamente HNSW** en ambas arquitecturas (v1 y v2). No
 implementa IVF (Inverted File Index), que es típico de motores orientados a
 clustering por celdas como Faiss. Los vectores se cargan en memoria nativa
@@ -38,7 +38,5 @@ sharding horizontal del índice para escalar a cientos de millones de
 documentos.
 
 ## Fuentes
-- Blog oficial: "Marqo V2: Performance at Scale, Predictability, and
-  Control" (marqo.ai/blog)
-- Blog oficial: "Understanding Recall in HNSW Search" (marqo.ai/blog)
-- Repositorio: github.com/marqo-ai/marqo
+- Blog oficial: https://www.marqo.ai/blog/what-is-marqo
+- Blog oficial: https://www.marqo.ai/blog/understanding-recall-in-hnsw-search
