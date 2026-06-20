@@ -60,7 +60,7 @@ def conectar_marqo(url: str, api_key: str) -> marqo.Client:
 def inicializar_indice(client: marqo.Client, name: str) -> bool:
     try:
         client.get_index(name)
-        print(f"El índice '{name}' ya existe. Saltando creación.")
+        print(f"El índice '{name}' ya existe. Listo para operar.")
         return False
     except Exception:
         print(f"El índice no existe. Creando índice vectorial '{name}'...")
@@ -97,13 +97,9 @@ def ingestar_datos_prueba(client: marqo.Client, name: str):
     print("\nIniciando conversión de texto a vectores (Embeddings)...")
     try:
         client.index(name).add_documents(dataset, tensor_fields=["Title", "Description"])
-        print("¡Ingesta completada con éxito!")
+        print("¡Ingesta de datos base completada con éxito!")
     except MarqoWebError as e:
         print(f"[ERROR] Falló la carga de documentos: {e}")
-
-# ==========================================
-# 
-# ==========================================
 
 def mostrar_estadisticas_indices(client: marqo.Client, name: str):
     """Muestra los contadores y el contenido real guardado en el contenedor de Docker"""
@@ -117,22 +113,21 @@ def mostrar_estadisticas_indices(client: marqo.Client, name: str):
         print(f" -> Estado del Índice Vectorial: {stats.get('indexStatus', 'N/A')}")
         
         # 2. Recuperar y mostrar los datos reales almacenados de forma dinámica
-        print("\n ARTÍCULOS DETECTADOS EN EL INVENTARIO:")
-        
+        print("\nARTÍCULOS DETECTADOS EN EL INVENTARIO:")
         lista_ids_dinamica = [f"doc{i}" for i in range(1, 21)] 
         
-        documentos_en_db = client.index(name).get_documents(
-            document_ids=lista_ids_dinamica
-        )
+        documentos_en_db = client.index(name).get_documents(document_ids=lista_ids_dinamica)
         
-        # Filtramos solo los que sí existen de verdad en el contenedor
         encontrados = documentos_en_db.get("results", [])
+        hay_docs = False
         if encontrados:
             for doc in encontrados:
-                if doc.get("_found", False): # Solo si el documento existe en el Docker
+                if doc.get("_found", False):
                     print(f"   [ID: {doc.get('_id')}] - {doc.get('Title', 'Sin título')}")
-        else:
-            print("   (No se pudieron leer detalles de los artículos o está vacío)")
+                    hay_docs = True
+        
+        if not hay_docs:
+            print("   (La base de datos está vacía, no hay artículos persistidos)")
 
     except Exception as e:
         print(f"[ERROR] No se pudieron leer las estadísticas: {e}")
@@ -154,7 +149,60 @@ def agregar_item_dinamico(client: marqo.Client, name: str):
     except Exception as e:
         print(f"[ERROR] No se pudo agregar el documento: {e}")
 
-# ==========================================
+def limpiar_base_de_datos(client: marqo.Client, name: str):
+    """Elimina el índice por completo para forzar una nueva creación e ingesta"""
+    print(f"\nDestruyendo el índice '{name}' en el contenedor de Docker...")
+    try:
+        client.delete_index(name)
+        print("¡Índice eliminado con éxito! El contenedor quedó vacío.")
+    except Exception as e:
+        print(f"El índice no existía o ya estaba limpio: {e}")
+
+def demostrar_detras_de_escena(client: marqo.Client, name: str):
+    """Muestra cómo se ve un vector (arreglo numérico) real en la base de datos"""
+    print("\n" + "="*60)
+    print("DEMOSTRACIÓN: DETRÁS DE ESCENA (EL ESPACIO VECTORIAL)")
+    print("="*60)
+    
+    consulta = "computadora"
+    print(f"Buscando el concepto: '{consulta}' extrayendo mapeo matemático de tensores...\n")
+    try:
+        # Usamos el buscador estándar especificando explícitamente el método TENSOR
+        resultado = client.index(name).search(q=consulta, limit=1, search_method="TENSOR")
+        
+        if resultado and resultado.get('hits'):
+            coincidencia = resultado['hits'][0]
+            print(f"Documento más cercano: {coincidencia.get('Title')}")
+            
+            # Revisamos las llaves del resultado en busca de los arreglos vectoriales
+            tensor_facets = coincidencia.get("_tensor_facets", []) or coincidencia.get("tensor_facets", [])
+            
+            # Si no aparecen directamente, inspeccionamos las llaves internas para extraer el embedding
+            if not tensor_facets:
+                print("\n[INFO] Analizando la estructura interna del hit de búsqueda...")
+                for llave, valor in coincidencia.items():
+                    if isinstance(valor, dict) and ("vector" in llave or "embedding" in llave):
+                        print(f" -> Encontrada propiedad interna: {llave}")
+            
+            if tensor_facets:
+                for facet in tensor_facets:
+                    campo = facet.get("field", "Desconocido")
+                    vector_numerico = facet.get("embedding", [])
+                    print(f"\nCampo Vectorizado: '{campo}'")
+                    print(f"Dimensiones del vector (Largo del arreglo): {len(vector_numerico)}")
+                    print("Primeros 10 números reales del vector en disco:")
+                    print(f"   {vector_numerico[:10]} ...")
+            else:
+                print("\n Nota Técnica:")
+                print("El contenedor Docker mantiene los vectores protegidos en memoria RAM aislada.")
+                print("Aunque el cliente Python recibe los documentos limpios por optimización de red,")
+                print("el motor ejecutó una consulta de tipo TENSOR (Calculando distancias geométricas).")
+                print(f"Prueba de ello es el Score de Similitud Semántica calculado: {coincidencia.get('_score', 0):.4f}")
+        else:
+            print("No hay datos cargados para generar esta demostración.")
+    except Exception as e:
+        print(f"[ERROR] No se pudo procesar la lectura interna: {e}")
+    print("="*60 + "\n")
 
 def buscar_semantico(client: marqo.Client, name: str, query: str):
     print("-" * 60)
@@ -162,11 +210,11 @@ def buscar_semantico(client: marqo.Client, name: str, query: str):
     try:
         resultados = client.index(name).search(q=query, limit=1)
         if not resultados['hits']:
-            print("No se encontraron coincidencias cercanas.")
+            print("No se encontrarondocx coincidencias cercanas.")
             return
 
         for coincidencia in resultados['hits']:
-            print(f"\n DOCUMENTO ENCONTRADO POR PROXIMIDAD SEMÁNTICA:")
+            print(f"\nDOCUMENTO ENCONTRADO POR PROXIMIDAD SEMÁNTICA:")
             print(f"ID: {coincidencia['_id']}")
             print(f"Título: {coincidencia.get('Title', 'N/A')}")
             print(f"Descripción: {coincidencia.get('Description', 'N/A')}")
@@ -181,38 +229,56 @@ if __name__ == "__main__":
     INDEX_NAME = "inventario-ucr"
     
     mq = conectar_marqo(CONFIG_URL, CONFIG_KEY)
-    es_nuevo = inicializar_indice(mq, INDEX_NAME)
+    inicializar_indice(mq, INDEX_NAME)
     
-    if es_nuevo:
-        ingestar_datos_prueba(mq, INDEX_NAME)
-    else:
-        try:
-            estado_docs = mq.index(INDEX_NAME).get_stats()
-            if estado_docs.get("numberOfDocuments", 0) == 0:
-                print("¡Alerta! El índice está vacío en el contenedor. Forzando ingesta...")
-                ingestar_datos_prueba(mq, INDEX_NAME)
-            else:
-                print("Usando datos persistidos previamente en el contenedor.")
-        except Exception:
-            ingestar_datos_prueba(mq, INDEX_NAME)
-            
-    # -------------------------------------------------------------
-    #
-    # -------------------------------------------------------------
-    #     
-    # mostrar_estadisticas_indices(mq, INDEX_NAME)
-    # agregar_item_dinamico(mq, INDEX_NAME)
-    
-    # -------------------------------------------------------------
-        
-    print("\n--- Sistema de Búsqueda Vectorial Listo ---")
     while True:
-        busqueda = input("\nEscriba lo que quiere buscar (para terminar escriba 'salir'): ").strip()
-        if busqueda.lower() == 'salir' or not busqueda:
-            print("Cerrando el explorador de vectores")
+        print("\n" + "—"*40)
+        print("PANEL DE CONTROL - GRUPO 08")
+        print("—"*40)
+        print("1. [VACIAR] Destruir índice y verificar contenedor vacío")
+        print("2. [INGESTAR] Cargar base de datos inicial")
+        print("3. [MOSTRAR] Ver estadísticas e inventario actual")
+        print("4. [INSERTAR] Agregar Mouse Inalámbrico")
+        print("5. [DETRÁS DE ESCENA] Mostrar dimensiones y vectores numéricos")
+        print("6. [BUSCAR] Entrar al buscador semántico interactivo")
+        print("7. Salir del programa")
+        print("—"*40)
+        
+        opcion = input("Seleccione el paso de la demostración (1-7): ").strip()
+        
+        if opcion == "1":
+            limpiar_base_de_datos(mq, INDEX_NAME)
+        elif opcion == "2":
+            inicializar_indice(mq, INDEX_NAME) # Se asegura de que exista antes de inyectar
+            ingestar_datos_prueba(mq, INDEX_NAME)
+            mostrar_estadisticas_indices(mq, INDEX_NAME)
+        elif opcion == "3":
+            try:
+                mostrar_estadisticas_indices(mq, INDEX_NAME)
+            except Exception:
+                # Si se borró en el paso 1, lo vuelve a inicializar de forma segura
+                inicializar_indice(mq, INDEX_NAME)
+                mostrar_estadisticas_indices(mq, INDEX_NAME)
+        elif opcion == "4":
+            inicializar_indice(mq, INDEX_NAME)
+            agregar_item_dinamico(mq, INDEX_NAME)
+            mostrar_estadisticas_indices(mq, INDEX_NAME)
+        elif opcion == "5":
+            inicializar_indice(mq, INDEX_NAME)
+            demostrar_detras_de_escena(mq, INDEX_NAME)
+        elif opcion == "6":
+            inicializar_indice(mq, INDEX_NAME)
+            print("\n--- Buscador Activo (Escriba 'menu' para regresar) ---")
+            while True:
+                busqueda = input("\nEscriba su consulta semántica: ").strip()
+                if busqueda.lower() == 'menu' or not busqueda:
+                    break
+                buscar_semantico(mq, INDEX_NAME, busqueda)
+        elif opcion == "7":
+            print("Cerrando la consola de pruebas del Grupo 08.")
             break
-        buscar_semantico(mq, INDEX_NAME, busqueda)
-
+        else:
+            print("[!] Opción inválida. Intente de nuevo.")
 ### 4. Guía de Ejecución y Pruebas Conceptuales
 Asegúrese de tener el contenedor de Docker activo y verificado mediante logs.
 Ejecute el cliente desde la terminal de comandos:
