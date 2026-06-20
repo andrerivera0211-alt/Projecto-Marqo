@@ -1,5 +1,0 @@
-marqo
-python-dotenv
-pandas
-jupyter
-pytest
