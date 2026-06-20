@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+  marqo_vector_db:
+    image: marqoai/marqo:latest
+    container_name: marqo_vector_db
+    environment:
+      - MARQO_MAX_NUMBER_OF_MODELS=1
+      - MARQO_MODELS_TO_PRELOAD=[]
+    ports:
+      - "8222:8882"
+    restart: unless-stopped
