@@ -113,6 +113,14 @@ def agregar_item_dinamico(client: marqo.Client, name: str):
     except Exception as e:
         print(f"[ERROR] No se pudo agregar el documento: {e}")
 
+def limpiar_base_de_datos(client: marqo.Client, name: str):
+    """Elimina el índice por completo para forzar una nueva creación e ingesta"""
+    print(f"\n Destruyendo el índice '{name}' en el contenedor de Docker...")
+    try:
+        client.delete_index(name)
+        print("¡Índice eliminado con éxito! El contenedor quedó vacío.")
+    except Exception as e:
+        print(f"El índice no existía o ya estaba limpio: {e}")
 # ==========================================
 
 def buscar_semantico(client: marqo.Client, name: str, query: str):
@@ -140,34 +148,42 @@ if __name__ == "__main__":
     INDEX_NAME = "inventario-ucr"
     
     mq = conectar_marqo(CONFIG_URL, CONFIG_KEY)
+    
+    # [DESCOMENTADO] Borra todo para empezar la prueba en cero:
+    #limpiar_base_de_datos(mq, INDEX_NAME) 
+    
     es_nuevo = inicializar_indice(mq, INDEX_NAME)
     
     if es_nuevo:
-        ingestar_datos_prueba(mq, INDEX_NAME)
+        # [COMENTADO] Evitamos que cargue los datos de una vez para poder mostrarlo vacío
+        #ingestar_datos_prueba(mq, INDEX_NAME)
+        pass
     else:
         try:
             estado_docs = mq.index(INDEX_NAME).get_stats()
             if estado_docs.get("numberOfDocuments", 0) == 0:
-                print("¡Alerta! El índice está vacío en el contenedor. Forzando ingesta...")
-                ingestar_datos_prueba(mq, INDEX_NAME)
+                #ingestar_datos_prueba(mq, INDEX_NAME) # [COMENTADO]
+                pass
             else:
                 print("Usando datos persistidos previamente en el contenedor.")
         except Exception:
-            ingestar_datos_prueba(mq, INDEX_NAME)
+            #ingestar_datos_prueba(mq, INDEX_NAME) # [COMENTADO]
+            pass
             
-    # -------------------------------------------------------------
-    #
-    # -------------------------------------------------------------
-    #     
-    # mostrar_estadisticas_indices(mq, INDEX_NAME)
-    # agregar_item_dinamico(mq, INDEX_NAME)
+    # [DESCOMENTADO] Muestra que el contenedor efectivamente quedó en 0:
+    mostrar_estadisticas_indices(mq, INDEX_NAME) 
     
-    # -------------------------------------------------------------
-        
-    print("\n--- Sistema de Búsqueda Vectorial Listo ---")
-    while True:
-        busqueda = input("\nEscriba lo que quiere buscar (para terminar escriba 'salir'): ").strip()
-        if busqueda.lower() == 'salir' or not busqueda:
-            print("Cerrando el explorador de vectores")
-            break
-        buscar_semantico(mq, INDEX_NAME, busqueda)
+    # [COMENTADO] No agregamos el ítem dinámico todavía:
+    # agregar_item_dinamico(mq, INDEX_NAME)
+    #mostrar_estadisticas_indices(mq, INDEX_NAME) 
+
+    # ==========================================
+    #BUSQUEDA VECTORIAL
+    # ==========================================
+    # print("\n--- Sistema de Búsqueda Vectorial Listo ---")
+    # while True:
+    #     busqueda = input("\nEscriba lo que quiere buscar (para terminar escriba 'salir'): ").strip()
+    #     if busqueda.lower() == 'salir' or not busqueda:
+    #         print("Cerrando el explorador de vectores")
+    #         break
+    #     buscar_semantico(mq, INDEX_NAME, busqueda)
